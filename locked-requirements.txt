@@ -1,4 +1,5 @@
 Django==2.0.5
+django-polymorphic==2.0.2
 flake8==3.5.0
 mccabe==0.6.1
 pkg-resources==0.0.0
