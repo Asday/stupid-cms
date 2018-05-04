@@ -45,17 +45,22 @@ class Page(models.Model):
         super().__init__(*args, **kwargs)
 
         self._old_slug = self.slug
+        self._old_parent = self.parent
+
+    @property
+    def _denormalised_path_parts(self):
+        return [
+            part for part in [self.parent.denormalised_path, self.parent.slug]
+            if part
+        ]
+
+    def generate_denormalised_path(self):
+        return '/'.join(self._denormalised_path_parts)
 
     def _denormalise_path(self):
         # Update own `denormalised_path`
         if self.parent:
-            # Trigger parent's path denormalisation if needed.
-            self.parent.save()
-
-            self.denormalised_path = '/'.join([
-                self.parent.denormalised_path,
-                self.parent.slug,
-            ])
+            self.denormalised_path = self.generate_denormalised_path()
 
         else:
             self.denormalised_path = ''
@@ -63,31 +68,37 @@ class Page(models.Model):
         self._redenormalise_children_paths()
 
     def _redenormalise_children_paths(self):
-        for child in self.children:
+        for child in self.children.all():
             child.save(redenormalise_path=True)
 
-    def _redenormalise_path_if_needed(self, force=False):
-        redenormalise_path = force
-
+    @property
+    def _path_needs_redenormalising(self):
         # Do we need to initialise the denormalised path?
         if not self.denormalised_path and self.parent is not None:
-            redenormalise_path = True
+            return True
 
         # If we've just been moved to the top level, we'll need to
         # blank `denormalised_path` and update our children anyway.
         if self.denormalised_path and self.parent is None:
-            redenormalise_path = True
+            return True
 
-        # If our slug has changed...
+        # Has our slug changed?
         if self._old_slug != self.slug:
-            redenormalise_path = True
+            return True
 
-        if redenormalise_path:
+        # Have we been adopted?
+        if self._old_parent != self.parent:
+            return True
+
+        return False
+
+    def _redenormalise_path_if_needed(self, force=False):
+        if force or self._path_needs_redenormalising:
             self._denormalise_path()
 
     def save(self, *args, redenormalise_path=False, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.name, allow_unicode=True)
+            self.slug = slugify(self.title, allow_unicode=True)
 
         self._redenormalise_path_if_needed(force=redenormalise_path)
 
