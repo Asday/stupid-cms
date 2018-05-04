@@ -41,11 +41,16 @@ class Page(models.Model):
     class Meta:
         unique_together = ('denormalised_path', 'slug')
 
+    def __str__(self):
+        return f'Page "{self.title}"'
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self._old_slug = self.slug
         self._old_parent = self.parent
+
+        self._children_paths_redenormalisation_scheduled = False
 
     @property
     def _denormalised_path_parts(self):
@@ -55,21 +60,26 @@ class Page(models.Model):
         ]
 
     def generate_denormalised_path(self):
-        return '/'.join(self._denormalised_path_parts)
+        if self.parent:
+            return '/'.join(self._denormalised_path_parts)
+
+        return ''
 
     def _denormalise_path(self):
         # Update own `denormalised_path`
-        if self.parent:
-            self.denormalised_path = self.generate_denormalised_path()
+        self.denormalised_path = self.generate_denormalised_path()
 
-        else:
-            self.denormalised_path = ''
-
-        self._redenormalise_children_paths()
+        self._children_paths_redenormalisation_scheduled = True
 
     def _redenormalise_children_paths(self):
         for child in self.children.all():
             child.save(redenormalise_path=True)
+
+    def _redenormalise_children_paths_if_needed(self):
+        if self._children_paths_redenormalisation_scheduled:
+            self._redenormalise_children_paths()
+
+        self._children_paths_redenormalisation_scheduled = False
 
     @property
     def _path_needs_redenormalising(self):
@@ -102,7 +112,11 @@ class Page(models.Model):
 
         self._redenormalise_path_if_needed(force=redenormalise_path)
 
-        return super().save(*args, **kwargs)
+        ret = super().save(*args, **kwargs)
+
+        self._redenormalise_children_paths_if_needed()
+        
+        return ret
 
 
 class Block(PolymorphicModel):

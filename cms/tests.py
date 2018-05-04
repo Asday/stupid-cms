@@ -44,3 +44,39 @@ class PathDenormalisationTestCase(TestCase):
         page = Page.objects.create(title='1', parent=self.pages['C'])
 
         self.assertEqual(page.denormalised_path, 'a/b/c')
+
+    @tag('functional')
+    def test_root_page_has_correct_path_after_becoming_a_leaf(self):
+        self.pages['E'].parent = self.pages['A']
+        self.pages['E'].save()
+
+        self.assertEqual(self.pages['E'].denormalised_path, 'a')
+
+    @tag('functional')
+    def test_root_page_has_correct_path_after_becoming_a_deep_leaf(self):
+        self.pages['E'].parent = self.pages['C']
+        self.pages['E'].save()
+
+        self.assertEqual(self.pages['E'].denormalised_path, 'a/b/c')
+
+    @tag('functional')
+    def test_child_pages_have_correct_paths_after_parent_moves_under_a_different_page(self):  # noqa
+        self.pages['B'].parent = self.pages['E']
+        self.pages['B'].save()
+
+        self.pages['C'].refresh_from_db()
+        self.pages['D'].refresh_from_db()
+
+        self.assertEqual(self.pages['C'].denormalised_path, 'e/b')
+        self.assertEqual(self.pages['D'].denormalised_path, 'e/b')
+
+    @tag('functional')
+    def test_child_pages_have_correct_paths_after_parent_moves_to_root(self):
+        self.pages['B'].parent = None
+        self.pages['B'].save()
+
+        self.pages['C'].refresh_from_db()
+        self.pages['D'].refresh_from_db()
+
+        self.assertEqual(self.pages['C'].denormalised_path, 'b')
+        self.assertEqual(self.pages['D'].denormalised_path, 'b')
