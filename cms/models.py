@@ -33,6 +33,7 @@ class Page(models.Model):
             ' include the current `Page`.'
         ),
         editable=False,
+        db_index=True,
     )
 
     title = models.CharField(max_length=1024)
