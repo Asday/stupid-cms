@@ -95,3 +95,21 @@ class PathDenormalisationTestCase(TestCase):
 
         with self.assertRaises(ValidationError):
             self.pages['A'].save()
+
+    @tag('functional')
+    def test_breadcrumb_generation_of_root_page(self):
+        self.assertEqual(
+            self.pages['A'].get_breadcrumbs(),
+            [{'title': 'A', 'url': '/a/'}],
+        )
+
+    @tag('functional')
+    def test_breadcrumb_generation_of_deep_leaf(self):
+        self.assertEqual(
+            self.pages['C'].get_breadcrumbs(),
+            [
+                {'title': 'C', 'url': '/a/b/c/'},
+                {'title': 'B', 'url': '/a/b/'},
+                {'title': 'A', 'url': '/a/'},
+            ],
+        )

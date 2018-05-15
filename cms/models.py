@@ -159,6 +159,38 @@ class Page(models.Model):
 
         return reverse(f'cms:{url}', kwargs=kwargs)
 
+    def get_breadcrumbs(self):
+        # Let's do some janky string manip to avoid thousands of
+        # database queries.
+        def create_crumb(path, slug, title):
+            kwargs = {'slug': slug}
+            if path:
+                kwargs['path'] = path
+
+            name = 'cms:path_page' if path else 'cms:path_page_root'
+            return {
+                'title': title,
+                'url': reverse(name, kwargs=kwargs),
+            }
+
+        path = self.denormalised_path
+        slug = self.slug
+        title = self.title
+        titles = []
+        if self.denormalised_titles:
+            titles = self.denormalised_titles.split('\n')
+
+        crumbs = [create_crumb(path, slug, title)]
+        while titles:
+            *path, slug = path.rsplit('/', 1)
+            path = path[0] if path else ''
+            title = titles.pop()
+
+            crumbs.append(create_crumb(path, slug, title))
+
+        return crumbs
+
+
     def save(self, *args, redenormalise_path=False, **kwargs):
         if not self.slug:
             self.slug = slugify(self.title, allow_unicode=True)
