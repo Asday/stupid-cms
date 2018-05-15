@@ -28,10 +28,10 @@
 
     <article class='content'>
       <aside class='table-of-contents'>
-        {% include 'cms/partials/table_of_contents.html' with blocks=page.blocks %}
+        {% include 'cms/partials/table_of_contents.html' with blocks=page.blocks.all %}
       </aside>
 
-      {% for block in page.blocks %}
+      {% for block in page.blocks.all %}
         {% include block.template_name with block=block %}
       {% endfor %}
     </article>
