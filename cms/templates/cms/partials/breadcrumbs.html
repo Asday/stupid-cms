@@ -1,0 +1,6 @@
+{% for breadcrumb in breadcrumbs reversed %}
+  <a href="{{ breadcrumb.url }}">{{ breadcrumb.title }}</a>
+  {% if not forloop.last %}
+    /
+  {% endif %}
+{% endfor %}

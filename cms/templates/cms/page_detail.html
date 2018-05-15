@@ -1,5 +1,7 @@
 {{ page }}
 
+{% include 'cms/partials/breadcrumbs.html' with breadcrumbs=breadcrumbs %}
+
 {% if alter_URL %}
   <script>
     history.replaceState(null, '{{ page.title }}', '{{ page.get_absolute_url }}')
