@@ -37,6 +37,14 @@ class Page(models.Model):
         editable=False,
         db_index=True,
     )
+    denormalised_titles = models.TextField(
+        help_text=(
+            'Ordered newline-separated list of parent `Page`s\' titles,'
+            ' starting from the top level `Page`.  This does not'
+            ' include the current `Page`.'
+        ),
+        editable=False,
+    )
 
     title = models.CharField(max_length=1024)
     slug = models.SlugField(blank=True)
@@ -68,9 +76,24 @@ class Page(models.Model):
 
         return ''
 
+    @property
+    def _denormalised_title_parts(self):
+        return [
+            part for part
+            in [self.parent.denormalised_titles, self.parent.title]
+            if part
+        ]
+
+    def generate_denormalised_titles(self):
+        if self.parent:
+            return '\n'.join(self._denormalised_title_parts)
+
+        return ''
+
     def _denormalise_path(self):
         # Update own `denormalised_path`
         self.denormalised_path = self.generate_denormalised_path()
+        self.denormalised_titles = self.generate_denormalised_titles()
 
         self._children_paths_redenormalisation_scheduled = True
 
