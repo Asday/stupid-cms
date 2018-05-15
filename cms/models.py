@@ -190,7 +190,6 @@ class Page(models.Model):
 
         return crumbs
 
-
     def save(self, *args, redenormalise_path=False, **kwargs):
         if not self.slug:
             self.slug = slugify(self.title, allow_unicode=True)
@@ -212,9 +211,34 @@ class Block(PolymorphicModel):
         related_name='blocks',
         on_delete=models.CASCADE,
     )
+    position = models.PositiveSmallIntegerField(editable=False)
+
+    class Meta:
+        unique_together = ('parent_page', 'position')
+
+    def save(self, *args, **kwargs):
+        if self.position is None:
+            # Get the first available position.
+            taken_positions = list(self.parent_page.blocks.values_list(
+                'position', flat=True))
+
+            position = 1
+            while True:
+                try:
+                    taken_positions.remove(position)
+                except ValueError:
+                    break
+
+                position += 1
+
+            self.position = position
+
+        return super().save(*args, **kwargs)
 
 
 class TextBlock(Block):
+    template_name = 'cms/blocks/textblock.html'
+
     content = models.TextField()
 
 
