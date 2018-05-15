@@ -24,6 +24,7 @@ class Page(models.Model):
         'self',
         related_name='children',
         on_delete=models.PROTECT,
+        blank=True,
         null=True,
     )
     denormalised_path = models.TextField(
@@ -37,7 +38,7 @@ class Page(models.Model):
     )
 
     title = models.CharField(max_length=1024)
-    slug = models.SlugField()
+    slug = models.SlugField(blank=True)
 
     class Meta:
         unique_together = ('denormalised_path', 'slug')
