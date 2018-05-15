@@ -1,5 +1,7 @@
 {{ page }}
 
 {% if alter_URL %}
-  alter URL
+  <script>
+    history.replaceState(null, '{{ page.title }}', '{{ page.get_absolute_url }}')
+  </script>
 {% endif %}
