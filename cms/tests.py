@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.test import TestCase, tag
 
 from .models import Page
@@ -80,3 +81,17 @@ class PathDenormalisationTestCase(TestCase):
 
         self.assertEqual(self.pages['C'].denormalised_path, 'b')
         self.assertEqual(self.pages['D'].denormalised_path, 'b')
+
+    @tag('functional')
+    def test_page_cannot_become_a_child_of_itself(self):
+        self.pages['A'].parent = self.pages['A']
+
+        with self.assertRaises(ValidationError):
+            self.pages['A'].save()
+
+    @tag('functional')
+    def test_page_cannot_become_a_descendant_of_itself(self):
+        self.pages['A'].parent = self.pages['B']
+
+        with self.assertRaises(ValidationError):
+            self.pages['A'].save()

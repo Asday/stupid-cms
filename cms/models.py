@@ -106,16 +106,36 @@ class Page(models.Model):
         if force or self._path_needs_redenormalising:
             self._denormalise_path()
 
+    def _validate_noncyclic_hierarchy(self):
+        # If we've not been adopted, short-circuit.
+        if self.pk is not None and self._old_parent_id == self.parent_id:
+            return
+
+        # If we've become a root, also short-circuit.
+        if self.parent is None:
+            return
+
+        parent = self.parent
+        while parent is not None:
+            if parent.id == self.id:
+                raise ValidationError(
+                    'Pages cannot be descendants of themselves.'
+                )
+
+            parent = parent.parent
+
     def save(self, *args, redenormalise_path=False, **kwargs):
         if not self.slug:
             self.slug = slugify(self.title, allow_unicode=True)
+
+        self._validate_noncyclic_hierarchy()
 
         self._redenormalise_path_if_needed(force=redenormalise_path)
 
         ret = super().save(*args, **kwargs)
 
         self._redenormalise_children_paths_if_needed()
-        
+
         return ret
 
 
