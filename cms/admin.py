@@ -1,9 +1,6 @@
 from django.contrib import admin
 
-from polymorphic.admin import (
-    PolymorphicChildModelAdmin,
-    PolymorphicParentModelAdmin,
-)
+from polymorphic.admin import PolymorphicParentModelAdmin
 
 from .models import Block, Page, TextBlock
 
