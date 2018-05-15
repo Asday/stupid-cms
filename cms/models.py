@@ -2,6 +2,7 @@ from uuid import uuid4
 
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.shortcuts import reverse
 from django.utils.text import slugify
 
 from polymorphic.models import PolymorphicModel
@@ -125,6 +126,15 @@ class Page(models.Model):
                 )
 
             parent = parent.parent
+
+    def get_absolute_url(self):
+        url = 'path_page'
+        kwargs = {'slug': self.slug, 'path': self.denormalised_path}
+        if self.parent is None:
+            url += '_root'
+            kwargs.pop('path')
+
+        return reverse(f'cms:{url}', kwargs=kwargs)
 
     def save(self, *args, redenormalise_path=False, **kwargs):
         if not self.slug:
