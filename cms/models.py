@@ -48,7 +48,7 @@ class Page(models.Model):
         super().__init__(*args, **kwargs)
 
         self._old_slug = self.slug
-        self._old_parent = self.parent
+        self._old_parent_id = self.parent_id
 
         self._children_paths_redenormalisation_scheduled = False
 
@@ -97,7 +97,7 @@ class Page(models.Model):
             return True
 
         # Have we been adopted?
-        if self._old_parent != self.parent:
+        if self._old_parent_id != self.parent_id:
             return True
 
         return False
