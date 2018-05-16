@@ -1,3 +1,4 @@
+from functools import reduce
 from uuid import uuid4
 
 from django.core.exceptions import ValidationError
@@ -227,28 +228,28 @@ class Page(models.Model):
 
         sibling_links = []
         for sibling in siblings:
-            link = make_link(sibling)
+            sibling_links.append(make_link(sibling))
             if sibling.id == self.id and child_links:
-                link['children'] = child_links
-
-            sibling_links.append(link)
+                sibling_links[-1]['children'] = child_links
 
         if self.parent is None:
             return sibling_links
 
-        previous = sibling_links
-        parent_link = None
-        for parent in parents[:-1]:
-            parent_link = make_link(parent)
-            parent_link['children'] = previous
+        def parent_reducer(parent, grandparent):
+            grandparent['children'] = [parent]
 
-            previous = [parent_link]
+            return grandparent
+
+        parent_links = list(map(make_link, parents))
+        parent_links[0]['children'] = sibling_links
+        current_branch = reduce(parent_reducer, parent_links)
 
         links = []
-        for page in root_pages:
-            links.append(make_link(page))
-            if page.id == parents[-1].id:
-                links[-1]['children'] = [parent_link]
+        for root_page in root_pages:
+            if root_page.id == parents[-1].id:
+                links.append(current_branch)
+            else:
+                links.append(make_link(root_page))
 
         return links
 

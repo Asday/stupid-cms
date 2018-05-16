@@ -104,6 +104,37 @@ class SidebarLinkGeneration(TestCase):
             ],
         )
 
+    @tag('functional', 'regression')
+    def test_second_level_page_sees_below_root_level(self):
+        # Clear out setUp'd instances.  We're reproducing something!
+        for page in Page.objects.all().order_by('-pk'):
+            page.delete()
+
+        ro = Page.objects.create(title='ro')
+        coro = Page.objects.create(title='coro', parent=ro)
+        dc = Page.objects.create(title='dc', parent=coro)
+        sb = Page.objects.create(title='sb', parent=coro)
+
+        self.assertEqual(
+            coro.get_sidebar_links(),
+            [
+                {
+                    'title': 'ro',
+                    'url': '/ro/',
+                    'children': [
+                        {
+                            'title': 'coro',
+                            'url': '/ro/coro/',
+                            'children': [
+                                {'title': 'dc', 'url': '/ro/coro/dc/'},
+                                {'title': 'sb', 'url': '/ro/coro/sb/'},
+                            ],
+                        },
+                    ],
+                },
+            ],
+        )
+
 
 class PathDenormalisationTestCase(TestCase):
 
