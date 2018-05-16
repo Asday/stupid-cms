@@ -1,8 +1,10 @@
+from django.urls import reverse_lazy
 from django.contrib.auth.mixins import UserPassesTestMixin
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
-from django.views.generic import CreateView, DetailView
+from django.views.generic import CreateView, DetailView, FormView
 
-from .forms import PageForm
+from .forms import BlockTypeChoiceForm, PageForm
 from .models import Page
 
 
@@ -45,6 +47,25 @@ class UUIDPageView(PageView):
         context['alter_URL'] = True
 
         return context
+
+
+class AddBlockView(StaffOnlyMixin, FormView):
+    form_class = BlockTypeChoiceForm
+    template_name = 'cms/block_form.html'
+    success_url = reverse_lazy('cms:add_block_of_type')
+
+    def form_valid(self, form):
+        parameters = self.request.GET.copy()
+        parameters['blocktype'] = form.cleaned_data['blocktype']
+
+        return HttpResponseRedirect(
+            f'{self.get_success_url()}?{parameters.urlencode()}'
+        )
+
+
+class AddBlockOfTypeView(StaffOnlyMixin, CreateView):
+    # TODO:  Implement.
+    pass
 
 
 class AddPageView(StaffOnlyMixin, CreateView):

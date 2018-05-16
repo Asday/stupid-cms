@@ -42,8 +42,20 @@
         {% include 'cms/partials/table_of_contents.html' with blocks=page.blocks.all %}
       </aside>
 
+      {% if request.user.is_staff %}
+        <a href="{% url 'cms:add_block' %}?page={{ page.uuid }}">
+          Add block here
+        </a>
+      {% endif %}
+
       {% for block in page.blocks.all %}
         {% include block.template_name with block=block %}
+
+        {% if request.user.is_staff %}
+          <a href="{% url 'cms:add_block' %}?page={{ page.uuid }}&after={{ block.id }}">
+            Add block here
+          </a>
+        {% endif %}
       {% endfor %}
     </article>
   </main>
