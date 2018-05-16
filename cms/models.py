@@ -190,6 +190,68 @@ class Page(models.Model):
 
         return crumbs
 
+    def get_parents(self):
+        if self.parent is None:
+            return []
+
+        parents = [self.parent]
+        while parents[-1].parent is not None:
+            parents.append(parents[-1].parent)
+
+        return parents
+
+    def get_sidebar_links(self):
+        # TODO:  Denormalisation target.
+        # Also complete gutting and rewriting target 'cause this looks
+        # like pure, unrefined, ass.
+        """
+        Returns a nested data structure encompassing all top-level
+        `Page`s, all parents of the current `Page`, all the current
+        `Page`'s siblings, and all the current `Page`'s direct
+        children.
+        """
+
+        def make_link(page):
+            return {'title': page.title, 'url': page.get_absolute_url()}
+
+        root_pages = Page.objects.filter(parent=None).order_by('title')
+        parents = self.get_parents()
+        if self.parent is not None:
+            siblings = self.parent.children.all().order_by('title')
+        else:
+            siblings = root_pages
+        children = self.children.all().order_by('title')
+
+        # Build the tree from the leaves "upwards".
+        child_links = [make_link(child) for child in children]
+
+        sibling_links = []
+        for sibling in siblings:
+            link = make_link(sibling)
+            if sibling.id == self.id and child_links:
+                link['children'] = child_links
+
+            sibling_links.append(link)
+
+        if self.parent is None:
+            return sibling_links
+
+        previous = sibling_links
+        parent_link = None
+        for parent in parents[:-1]:
+            parent_link = make_link(parent)
+            parent_link['children'] = previous
+
+            previous = [parent_link]
+
+        links = []
+        for page in root_pages:
+            links.append(make_link(page))
+            if page.id == parents[-1].id:
+                links[-1]['children'] = [parent_link]
+
+        return links
+
     def save(self, *args, redenormalise_path=False, **kwargs):
         if not self.slug:
             self.slug = slugify(self.title, allow_unicode=True)

@@ -4,6 +4,107 @@ from django.test import TestCase, tag
 from .models import Page
 
 
+class SidebarLinkGeneration(TestCase):
+
+    def setUp(self):
+        """
+        A
+        |
+        +- B
+        |  |
+        |  +- C
+        |  |  |
+        |  |  +- D
+        |  |  |
+        |  |  +- E
+        |  |
+        |  +- F
+        |  |
+        |  +- G
+        |     |
+        |     +- H
+        |
+        +- I
+
+        J
+        """
+
+        pages = {}
+
+        pages['A'] = Page.objects.create(title='A')
+        pages['B'] = Page.objects.create(title='B', parent=pages['A'])
+        pages['C'] = Page.objects.create(title='C', parent=pages['B'])
+        pages['D'] = Page.objects.create(title='D', parent=pages['C'])
+        pages['E'] = Page.objects.create(title='E', parent=pages['C'])
+        pages['F'] = Page.objects.create(title='F', parent=pages['B'])
+        pages['G'] = Page.objects.create(title='G', parent=pages['B'])
+        pages['H'] = Page.objects.create(title='H', parent=pages['G'])
+        pages['I'] = Page.objects.create(title='I', parent=pages['A'])
+        pages['J'] = Page.objects.create(title='J')
+
+        self.pages = pages
+
+    @tag('functional')
+    def test_root_page_with_no_children_sees_only_root_pages_in_sidebar(self):
+        self.assertEqual(
+            self.pages['J'].get_sidebar_links(),
+            [
+                {'title': 'A', 'url': '/a/'},
+                {'title': 'J', 'url': '/j/'},
+            ],
+        )
+
+    @tag('functional')
+    def test_root_page_with_children_sees_only_root_pages_and_own_direct_children(self):
+        self.assertEqual(
+            self.pages['A'].get_sidebar_links(),
+            [
+                {
+                    'title': 'A',
+                    'url': '/a/',
+                    'children': [
+                        {'title': 'B', 'url': '/a/b/'},
+                        {'title': 'I', 'url': '/a/i/'},
+                    ],
+                },
+                {'title': 'J', 'url': '/j/'},
+            ],
+        )
+
+    @tag('functional')
+    def test_leaf_page_with_cousins_sees_all_root_pages_all_parents_all_siblings_and_all_children_but_not_cousins(self):
+        # I hate tests.
+        self.maxDiff = 1122
+        self.assertEqual(
+            self.pages['C'].get_sidebar_links(),
+            [
+                {
+                    'title': 'A',
+                    'url': '/a/',
+                    'children': [
+                        {
+                            'title': 'B',
+                            'url': '/a/b/',
+                            'children': [
+                                {
+                                    'title': 'C',
+                                    'url': '/a/b/c/',
+                                    'children': [
+                                        {'title': 'D', 'url': '/a/b/c/d/'},
+                                        {'title': 'E', 'url': '/a/b/c/e/'},
+                                    ],
+                                },
+                                {'title': 'F', 'url': '/a/b/f/'},
+                                {'title': 'G', 'url': '/a/b/g/'},
+                            ],
+                        },
+                    ],
+                },
+                {'title': 'J', 'url': '/j/'},
+            ],
+        )
+
+
 class PathDenormalisationTestCase(TestCase):
 
     def setUp(self):
@@ -15,6 +116,7 @@ class PathDenormalisationTestCase(TestCase):
            + C
            |
            + D
+
         E
         """
 
