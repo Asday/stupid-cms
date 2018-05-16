@@ -1,0 +1,4 @@
+<a href="{{ link.url }}" style="padding-left: {{ depth }}em;">{{ link.title }}</a><br />
+{% for child in link.children %}
+  {% include 'cms/partials/sidebar_link.html' with link=child depth=depth|add:1 %}
+{% endfor %}

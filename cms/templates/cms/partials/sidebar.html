@@ -1,0 +1,5 @@
+<nav class='sidebar'>
+  {% for link in page.get_sidebar_links %}
+    {% include 'cms/partials/sidebar_link.html' with link=link depth=0 %}
+  {% endfor %}
+</nav>
