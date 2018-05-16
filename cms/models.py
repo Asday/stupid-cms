@@ -2,11 +2,12 @@ from functools import reduce
 from uuid import uuid4
 
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 from django.shortcuts import reverse
 from django.utils.text import slugify
 
-from polymorphic.models import PolymorphicModel
+from polymorphic.models import PolymorphicManager, PolymorphicModel
+from polymorphic.query import PolymorphicQuerySet
 
 
 """
@@ -253,6 +254,42 @@ class Page(models.Model):
 
         return links
 
+    def get_first_position(self):
+        blocks = self.blocks.order_by('position')
+        if not blocks.exists():
+            return 100
+
+        if blocks.first().position == 0:
+            blocks = blocks.redistribute_positions()
+
+        return blocks.first().position // 2
+
+    def get_position_after(self, after=None):
+        if after is None:
+            return self.get_first_position()
+
+        after = self.blocks.get(id=after)
+        blocks_after = self.blocks.filter(position__gte=after.position)
+
+        if blocks_after.count() == 1:
+            if blocks_after.get().position == 32767:
+                # No space after; redistribute and try again.
+                self.blocks.redistribute_positions()
+
+                return self.get_position_after(after.id)
+
+            return after.position + 100
+
+        after, before = blocks_after[:2]
+
+        if before.position - after.position < 2:
+            # No space; redistribute and try again.
+            self.blocks.redistribute_positions()
+
+            return self.get_position_after(after.id)
+
+        return (after.position + before.position) // 2
+
     def save(self, *args, redenormalise_path=False, **kwargs):
         if not self.slug:
             self.slug = slugify(self.title, allow_unicode=True)
@@ -268,6 +305,38 @@ class Page(models.Model):
         return ret
 
 
+class BlockQuerySet(PolymorphicQuerySet):
+
+    def redistribute_positions(self):
+        if not self.exists():
+            return self
+
+        parent_pages = set(self.values_list('parent_page', flat=True))
+        if len(parent_pages) > 1:
+            raise ValueError(
+                'You may only redistribute blocks within one page at a'
+                ' time.'
+            )
+
+        if self[0].parent_page.blocks.count() != self.count():
+            raise ValueError(
+                'You must redistribute all blocks from a page at once.'
+            )
+
+        space = round(32767 * 0.8)
+        gap_size = space // self.count()
+
+        position = round(32767 * 0.1)
+        with transaction.atomic():
+            for block in self.order_by('position'):
+                block.position = position
+                block.save()
+
+                position += gap_size
+
+        return self
+
+
 class Block(PolymorphicModel):
     parent_page = models.ForeignKey(
         'cms.Page',
@@ -275,6 +344,8 @@ class Block(PolymorphicModel):
         on_delete=models.CASCADE,
     )
     position = models.PositiveSmallIntegerField(editable=False)
+
+    objects = PolymorphicManager.from_queryset(BlockQuerySet)()
 
     class Meta:
         unique_together = ('parent_page', 'position')

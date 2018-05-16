@@ -1,7 +1,109 @@
 from django.core.exceptions import ValidationError
 from django.test import TestCase, tag
 
-from .models import Page
+from .models import Block, Page
+
+
+class BlockRedistribution(TestCase):
+
+    def setUp(self):
+        self.page = Page.objects.create(title='A')
+
+        self.blocks = {
+            'c': Block.objects.create(parent_page=self.page, position=2),
+            'b': Block.objects.create(parent_page=self.page, position=1),
+            'a': Block.objects.create(parent_page=self.page, position=0),
+        }
+
+    @tag('functional')
+    def test_redistribute_positions_creates_space_at_the_beginning(self):
+        blocks = self.page.blocks.redistribute_positions()
+
+        self.assertGreater(blocks[0].position, 0)
+        self.assertGreater(blocks[1].position, 0)
+        self.assertGreater(blocks[2].position, 0)
+
+    @tag('functional')
+    def test_redistribute_positions_creates_space_between_blocks(self):
+        blocks = self.page.blocks.redistribute_positions()
+
+        self.assertGreater(blocks[1].position - blocks[0].position, 100)
+        self.assertGreater(blocks[2].position - blocks[1].position, 100)
+
+    @tag('functional')
+    def test_redistribute_positions_errors_if_used_on_blocks_from_more_than_one_page(self):
+        other_page = Page.objects.create(title='B')
+        foreign_block = Block.objects.create(parent_page=other_page, position=0)
+
+        with self.assertRaises(ValueError):
+            Block.objects.redistribute_positions()
+
+    @tag('functional')
+    def test_redistribute_positions_errors_if_not_used_on_all_blocks_from_a_page(self):
+        blocks = Block.objects.filter(position__gt=0)
+
+        with self.assertRaises(ValueError):
+            blocks.redistribute_positions()
+
+
+class PositionGeneration(TestCase):
+
+    def setUp(self):
+        self.page = Page.objects.create(title='A')
+
+    @tag('functional')
+    def test_position_with_space_before_it_is_generated_when_no_blocks_exist(self):
+        self.assertGreater(self.page.get_position_after(), 0)
+
+    @tag('functional')
+    def test_position_lower_than_all_others_is_generated_when_after_is_none(self):
+        Block.objects.create(parent_page=self.page, position=1)
+
+        self.assertEqual(self.page.get_position_after(), 0)
+
+    @tag('functional')
+    def test_position_lower_than_all_others_is_generated_when_after_is_none_and_no_space_is_available(self):
+        block = Block.objects.create(parent_page=self.page, position=0)
+
+        new_position = self.page.get_position_after()
+        block.refresh_from_db()
+
+        self.assertLess(new_position, block.position)
+
+    @tag('functional')
+    def test_position_is_correctly_generated_between_blocks(self):
+        first = Block.objects.create(parent_page=self.page, position=0)
+        Block.objects.create(parent_page=self.page, position=2)
+
+        self.assertEqual(self.page.get_position_after(first.id), 1)
+
+    @tag('functional')
+    def test_position_is_correctly_generated_between_blocks_with_no_space(self):
+        first = Block.objects.create(parent_page=self.page, position=0)
+        second = Block.objects.create(parent_page=self.page, position=1)
+
+        new_position = self.page.get_position_after(first.id)
+        first.refresh_from_db()
+        second.refresh_from_db()
+
+        self.assertGreater(new_position, first.position)
+        self.assertLess(new_position, second.position)
+
+    @tag('functional')
+    def test_position_is_correctly_generated_after_last_block(self):
+        block = Block.objects.create(parent_page=self.page, position=0)
+
+        self.assertGreater(self.page.get_position_after(block.id), 0)
+
+    @tag('functional')
+    def test_position_is_correctly_generated_after_last_block_with_high_position(self):
+        block = Block.objects.create(parent_page=self.page, position=32767)
+
+        new_position = self.page.get_position_after(block.id)
+        block.refresh_from_db()
+
+        self.assertGreater(new_position, block.position)
+        self.assertLessEqual(new_position, 32767)
 
 
 class SidebarLinkGeneration(TestCase):
