@@ -1,7 +1,15 @@
+from django.contrib.auth.mixins import UserPassesTestMixin
 from django.shortcuts import get_object_or_404
-from django.views.generic import DetailView
+from django.views.generic import CreateView, DetailView
 
+from .forms import PageForm
 from .models import Page
+
+
+class StaffOnlyMixin(UserPassesTestMixin):
+
+    def test_func(self):
+        return self.request.user.is_staff
 
 
 class PageView(DetailView):
@@ -37,3 +45,15 @@ class UUIDPageView(PageView):
         context['alter_URL'] = True
 
         return context
+
+
+class AddPageView(StaffOnlyMixin, CreateView):
+    model = Page
+    form_class = PageForm
+
+    def get_initial(self):
+        initial = super().get_initial()
+
+        initial['parent'] = self.request.GET.get('from', None)
+
+        return initial
