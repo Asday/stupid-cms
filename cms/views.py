@@ -2,10 +2,10 @@ from django.urls import reverse_lazy
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
-from django.views.generic import CreateView, DetailView, FormView
+from django.views.generic import CreateView, DetailView, FormView, View
 
-from .forms import BlockTypeChoiceForm, PageForm
-from .models import Page
+from .forms import BlockTypeChoiceForm, PageForm, TextBlockForm
+from .models import Page, TextBlock
 
 
 class StaffOnlyMixin(UserPassesTestMixin):
@@ -63,9 +63,44 @@ class AddBlockView(StaffOnlyMixin, FormView):
         )
 
 
-class AddBlockOfTypeView(StaffOnlyMixin, CreateView):
-    # TODO:  Implement.
-    pass
+class AddGenericBlockOfTypeBaseView(CreateView):
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+
+        parent_page = get_object_or_404(
+            Page.objects.all(),
+            uuid=self.request.GET.get('page', '')
+        )
+
+        position = parent_page.get_position_after(
+            self.request.GET.get('after')
+        )
+
+        kwargs.update({
+            'parent_page': parent_page,
+            'position': position,
+        })
+
+        return kwargs
+
+
+class AddTextBlockView(StaffOnlyMixin, AddGenericBlockOfTypeBaseView):
+    model = TextBlock
+    form_class = TextBlockForm
+
+
+class AddBlockOfTypeView(StaffOnlyMixin, View):
+    handlers = {
+        'textblock': AddTextBlockView.as_view(),
+    }
+
+    def dispatch(self, request, *args, **kwargs):
+        blocktype = request.GET.get('blocktype', '').lower()
+        if blocktype not in self.handlers:
+            return HttpResponseBadRequest('Malformed blocktype')
+
+        return self.handlers[blocktype](request, *args, **kwargs)
 
 
 class AddPageView(StaffOnlyMixin, CreateView):

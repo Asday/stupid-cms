@@ -350,6 +350,9 @@ class Block(PolymorphicModel):
     class Meta:
         unique_together = ('parent_page', 'position')
 
+    def get_absolute_url(self):
+        return f'{self.parent_page.get_absolute_url()}#{self.id}'
+
     def save(self, *args, **kwargs):
         if self.position is None:
             # Get the first available position.
