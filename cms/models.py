@@ -353,25 +353,6 @@ class Block(PolymorphicModel):
     def get_absolute_url(self):
         return f'{self.parent_page.get_absolute_url()}#{self.id}'
 
-    def save(self, *args, **kwargs):
-        if self.position is None:
-            # Get the first available position.
-            taken_positions = list(self.parent_page.blocks.values_list(
-                'position', flat=True))
-
-            position = 1
-            while True:
-                try:
-                    taken_positions.remove(position)
-                except ValueError:
-                    break
-
-                position += 1
-
-            self.position = position
-
-        return super().save(*args, **kwargs)
-
 
 class TextBlock(Block):
     template_name = 'cms/blocks/textblock.html'
