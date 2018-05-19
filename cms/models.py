@@ -1,7 +1,6 @@
 from functools import reduce
 from uuid import uuid4
 
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.shortcuts import reverse
@@ -361,7 +360,9 @@ class TextBlock(Block):
     content = models.TextField()
 
     def render(self):
-        return mark_safe(settings.MARKDOWN_PARSER.convert(self.content))
+        return mark_safe(
+            self._meta.app_config.markdown_parser.convert(self.content)
+        )
 
 
 class Reference(models.Model):
