@@ -1,5 +1,8 @@
+import json
+
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import UserPassesTestMixin
+from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpResponseBadRequest, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.views.generic import (
@@ -17,7 +20,7 @@ from .forms import (
     PageForm,
     TextBlockForm,
 )
-from .models import Block, Page, TextBlock
+from .models import Block, Page, TextBlock, UnsavedWork
 
 
 class StaffOnlyMixin(UserPassesTestMixin):
@@ -75,7 +78,86 @@ class AddBlockView(StaffOnlyMixin, FormView):
         )
 
 
-class AddGenericBlockOfTypeBaseView(CreateView):
+class UnsavedWorkMixin(object):
+    alternate_submit_button_name = None
+    alternate_success_url = None
+
+    def stash_unsaved_work(self, request):
+        UnsavedWork.objects.update_or_create(
+            user=request.user,
+            path=request.get_raw_uri(),
+            defaults={'work': json.dumps(self.request.POST)},
+        )
+
+    def post(self, request, *args, **kwargs):
+        if self.get_alternate_submit_button_name() in self.request.POST:
+            self.stash_unsaved_work(request)
+
+            return HttpResponseRedirect(self.get_alternate_success_url())
+
+        return super().post(request, *args, **kwargs)
+
+    def get_alternate_submit_button_name(self):
+        if self.alternate_submit_button_name is None:
+            raise ImproperlyConfigured(
+                'You must specify an `alternate_submit_button_name`, or'
+                ' override `.get_alternate_submit_button_name()` on'
+                f' {self.__class__.__name__}.'
+            )
+
+        return self.alternate_submit_button_name
+
+    def get_alternate_success_url(self):
+        if self.alternate_success_url is None:
+            raise ImproperlyConfigured(
+                'You must specify a `alternate_success_url`, or'
+                ' override `.get_alternate_success_url()` on'
+                f' {self.__class__.__name__}.'
+            )
+
+        return self.alternate_success_url
+
+    def get_unsaved_work(self):
+        try:
+            unsaved_work = UnsavedWork.objects.get(
+                user=self.request.user,
+                path=self.request.get_raw_uri(),
+            )
+        except UnsavedWork.DoesNotExist:
+            return None
+        else:  # noexcept
+            if unsaved_work.fresh:
+                return unsaved_work
+            else:
+                UnsavedWork.objects.delete_old_unsaved_work()
+
+                return None
+
+    def get_initial(self):
+        initial = super().get_initial()
+
+        unsaved_work = self.get_unsaved_work()
+        if unsaved_work is not None:
+            initial.update(json.loads(unsaved_work.work))
+
+        return initial
+
+    def form_valid(self, form):
+        unsaved_work = self.get_unsaved_work()
+        if unsaved_work is not None:
+            unsaved_work.delete()
+
+        return super().form_valid(form)
+
+
+class AddReferenceMixin(UnsavedWorkMixin):
+    alternate_submit_button_name = 'addReference'
+
+    def get_alternate_success_url(self):
+        return 'todo'
+
+
+class AddGenericBlockOfTypeBaseView(AddReferenceMixin, CreateView):
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -148,7 +230,7 @@ class DeleteBlockView(StaffOnlyMixin, DeleteView):
         return self.object.parent_page.get_absolute_url()
 
 
-class EditBlockView(StaffOnlyMixin, UpdateView):
+class EditBlockView(AddReferenceMixin, StaffOnlyMixin, UpdateView):
     model = Block
     form_classes = {
         TextBlock: EditTextBlockForm,

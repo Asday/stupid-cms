@@ -10,6 +10,10 @@
         <button type="submit">
           {% block button_text %}BUTTON_TEXT{% endblock %}
         </button>
+
+        <button type="submit" name="{{ view.alternate_submit_button_name }}">
+          Add Reference
+        </button>
       </form>
     </article>
   </main>

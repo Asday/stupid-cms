@@ -1,9 +1,11 @@
 from functools import reduce
 from uuid import uuid4
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.shortcuts import reverse
+from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.text import mark_safe, slugify
 
@@ -420,3 +422,43 @@ class Reference(models.Model):
         self._validate()
 
         return super().save(*args, **kwargs)
+
+
+class UnsavedWorkQuerySet(models.QuerySet):
+
+    def old(self):
+        ttl = self.model._meta.app_config.delete_unsaved_work_after
+        best_before = timezone.now() - ttl
+
+        return self.filter(updated__lte=best_before)
+
+    def delete_old_unsaved_work(self):
+        return self.old().delete()
+
+
+class UnsavedWork(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='unsaved_works',
+        on_delete=models.CASCADE,
+    )
+
+    path = models.TextField(db_index=True)
+    work = models.TextField()
+
+    updated = models.DateTimeField(auto_now=True, db_index=True)
+
+    objects = models.Manager.from_queryset(UnsavedWorkQuerySet)()
+
+    class Meta:
+        unique_together = ('user', 'path')
+
+    @property
+    def fresh(self):
+        ttl = self._meta.app_config.delete_unsaved_work_after
+        best_before = timezone.now() - ttl
+
+        if self.updated < best_before:
+            return False
+
+        return True
