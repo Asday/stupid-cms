@@ -1,10 +1,11 @@
 from functools import reduce
 from uuid import uuid4
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.shortcuts import reverse
-from django.utils.text import slugify
+from django.utils.text import mark_safe, slugify
 
 from polymorphic.models import PolymorphicManager, PolymorphicModel
 from polymorphic.query import PolymorphicQuerySet
@@ -358,6 +359,9 @@ class TextBlock(Block):
     template_name = 'cms/blocks/textblock.html'
 
     content = models.TextField()
+
+    def render(self):
+        return mark_safe(settings.MARKDOWN_PARSER.convert(self.content))
 
 
 class Reference(models.Model):
