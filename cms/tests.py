@@ -31,15 +31,15 @@ class BlockRedistribution(TestCase):
         self.assertGreater(blocks[2].position - blocks[1].position, 100)
 
     @tag('functional')
-    def test_redistribute_positions_errors_if_used_on_blocks_from_more_than_one_page(self):
+    def test_redistribute_positions_errors_if_used_on_blocks_from_more_than_one_page(self):  # noqa
         other_page = Page.objects.create(title='B')
-        foreign_block = Block.objects.create(parent_page=other_page, position=0)
+        Block.objects.create(parent_page=other_page, position=0)
 
         with self.assertRaises(ValueError):
             Block.objects.redistribute_positions()
 
     @tag('functional')
-    def test_redistribute_positions_errors_if_not_used_on_all_blocks_from_a_page(self):
+    def test_redistribute_positions_errors_if_not_used_on_all_blocks_from_a_page(self):  # noqa
         blocks = Block.objects.filter(position__gt=0)
 
         with self.assertRaises(ValueError):
@@ -52,17 +52,17 @@ class PositionGeneration(TestCase):
         self.page = Page.objects.create(title='A')
 
     @tag('functional')
-    def test_position_with_space_before_it_is_generated_when_no_blocks_exist(self):
+    def test_position_with_space_before_it_is_generated_when_no_blocks_exist(self):  # noqa
         self.assertGreater(self.page.get_position_after(), 0)
 
     @tag('functional')
-    def test_position_lower_than_all_others_is_generated_when_after_is_none(self):
+    def test_position_lower_than_all_others_is_generated_when_after_is_none(self):  # noqa
         Block.objects.create(parent_page=self.page, position=1)
 
         self.assertEqual(self.page.get_position_after(), 0)
 
     @tag('functional')
-    def test_position_lower_than_all_others_is_generated_when_after_is_none_and_no_space_is_available(self):
+    def test_position_lower_than_all_others_is_generated_when_after_is_none_and_no_space_is_available(self):  # noqa
         block = Block.objects.create(parent_page=self.page, position=0)
 
         new_position = self.page.get_position_after()
@@ -78,7 +78,7 @@ class PositionGeneration(TestCase):
         self.assertEqual(self.page.get_position_after(first.id), 1)
 
     @tag('functional')
-    def test_position_is_correctly_generated_between_blocks_with_no_space(self):
+    def test_position_is_correctly_generated_between_blocks_with_no_space(self):  # noqa
         first = Block.objects.create(parent_page=self.page, position=0)
         second = Block.objects.create(parent_page=self.page, position=1)
 
@@ -96,7 +96,7 @@ class PositionGeneration(TestCase):
         self.assertGreater(self.page.get_position_after(block.id), 0)
 
     @tag('functional')
-    def test_position_is_correctly_generated_after_last_block_with_high_position(self):
+    def test_position_is_correctly_generated_after_last_block_with_high_position(self):  # noqa
         block = Block.objects.create(parent_page=self.page, position=32767)
 
         new_position = self.page.get_position_after(block.id)
@@ -157,7 +157,7 @@ class SidebarLinkGeneration(TestCase):
         )
 
     @tag('functional')
-    def test_root_page_with_children_sees_only_root_pages_and_own_direct_children(self):
+    def test_root_page_with_children_sees_only_root_pages_and_own_direct_children(self):  # noqa
         self.assertEqual(
             self.pages['A'].get_sidebar_links(),
             [
@@ -174,7 +174,7 @@ class SidebarLinkGeneration(TestCase):
         )
 
     @tag('functional')
-    def test_leaf_page_with_cousins_sees_all_root_pages_all_parents_all_siblings_and_all_children_but_not_cousins(self):
+    def test_leaf_page_with_cousins_sees_all_root_pages_all_parents_all_siblings_and_all_children_but_not_cousins(self):  # noqa
         # I hate tests.
         self.maxDiff = 1122
         self.assertEqual(
@@ -214,8 +214,8 @@ class SidebarLinkGeneration(TestCase):
 
         ro = Page.objects.create(title='ro')
         coro = Page.objects.create(title='coro', parent=ro)
-        dc = Page.objects.create(title='dc', parent=coro)
-        sb = Page.objects.create(title='sb', parent=coro)
+        Page.objects.create(title='dc', parent=coro)
+        Page.objects.create(title='sb', parent=coro)
 
         self.assertEqual(
             coro.get_sidebar_links(),
