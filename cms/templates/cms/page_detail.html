@@ -48,8 +48,14 @@
         </a>
       {% endif %}
 
-      {% for block in page.blocks.all %}
-        {% include block.template_name with block=block %}
+      {% for cms_block in page.blocks.all %}
+        <section>
+          {% if request.user.is_staff %}
+            <a href="{% url 'cms:delete_block' pk=cms_block.pk %}">Delete block</a>
+          {% endif %}
+
+          {% include cms_block.template_name with cms_block=cms_block %}
+        </section>
 
         {% if request.user.is_staff %}
           <a href="{% url 'cms:add_block' %}?page={{ page.uuid }}&after={{ block.id }}">

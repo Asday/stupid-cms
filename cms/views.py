@@ -2,10 +2,16 @@ from django.urls import reverse_lazy
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.http import HttpResponseBadRequest, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
-from django.views.generic import CreateView, DetailView, FormView, View
+from django.views.generic import (
+    CreateView,
+    DeleteView,
+    DetailView,
+    FormView,
+    View,
+)
 
 from .forms import BlockTypeChoiceForm, PageForm, TextBlockForm
-from .models import Page, TextBlock
+from .models import Block, Page, TextBlock
 
 
 class StaffOnlyMixin(UserPassesTestMixin):
@@ -101,6 +107,39 @@ class AddBlockOfTypeView(StaffOnlyMixin, View):
             return HttpResponseBadRequest('Malformed blocktype')
 
         return self.handlers[blocktype](request, *args, **kwargs)
+
+
+class DeleteBlockView(StaffOnlyMixin, DeleteView):
+    model = Block
+    context_object_name = 'cms_block'
+
+    def get_template_names(self):
+        # The default implementation is a little too clever here, as
+        # we're using `PolymorphicModel`s, it detects the model's name
+        # as the most specific option.  In our case, we want the most
+        # generic, so only one template is needed.
+        #
+        # There are several options here; explicitly set
+        # `self.template_name`, which is nice and simple, but locks us
+        # in to being blocks should we want to reuse later.  We could
+        # reimplement the default implementation, but change one line
+        # to account for the polymorphism of our models, but future
+        # improvements to the function would need to be copied over.
+        # Temporarily patching the model name seems the least
+        # subversive way to do things, whilst still being subversive
+        # enough to be fun.
+
+        old_model_name = self.object._meta.model_name
+        self.object._meta.model_name = self.model._meta.model_name
+
+        template_names = super().get_template_names()
+
+        self.object._meta.model_name = old_model_name
+
+        return template_names
+
+    def get_success_url(self):
+        return self.object.parent_page.get_absolute_url()
 
 
 class AddPageView(StaffOnlyMixin, CreateView):

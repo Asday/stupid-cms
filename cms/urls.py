@@ -4,6 +4,7 @@ from .views import (
     AddBlockView,
     AddBlockOfTypeView,
     AddPageView,
+    DeleteBlockView,
     PathPageView,
     UUIDPageView,
 )
@@ -18,6 +19,11 @@ urlpatterns = [
         'add-block-of-type/',
         AddBlockOfTypeView.as_view(),
         name='add_block_of_type',
+    ),
+    path(
+        'delete-block/<int:pk>/',
+        DeleteBlockView.as_view(),
+        name='delete_block',
     ),
     path('<uuid:uuid>/', UUIDPageView.as_view(), name='uuid_page'),
     path('<path:path>/<slug:slug>/', PathPageView.as_view(), name='path_page'),
