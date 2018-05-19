@@ -39,3 +39,10 @@ class TextBlockForm(GenericBlockForm):
     class Meta:
         fields = ('content', )
         model = TextBlock
+
+
+class EditTextBlockForm(forms.ModelForm):
+
+    class Meta:
+        fields = ('content', )
+        model = TextBlock

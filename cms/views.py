@@ -7,10 +7,16 @@ from django.views.generic import (
     DeleteView,
     DetailView,
     FormView,
+    UpdateView,
     View,
 )
 
-from .forms import BlockTypeChoiceForm, PageForm, TextBlockForm
+from .forms import (
+    BlockTypeChoiceForm,
+    EditTextBlockForm,
+    PageForm,
+    TextBlockForm,
+)
 from .models import Block, Page, TextBlock
 
 
@@ -140,6 +146,17 @@ class DeleteBlockView(StaffOnlyMixin, DeleteView):
 
     def get_success_url(self):
         return self.object.parent_page.get_absolute_url()
+
+
+class EditBlockView(StaffOnlyMixin, UpdateView):
+    model = Block
+    form_classes = {
+        TextBlock: EditTextBlockForm,
+    }
+    template_name_suffix = '_edit_form'
+
+    def get_form_class(self):
+        return self.form_classes[self.object.__class__]
 
 
 class AddPageView(StaffOnlyMixin, CreateView):

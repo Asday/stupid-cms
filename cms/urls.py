@@ -5,6 +5,7 @@ from .views import (
     AddBlockOfTypeView,
     AddPageView,
     DeleteBlockView,
+    EditBlockView,
     PathPageView,
     UUIDPageView,
 )
@@ -20,6 +21,7 @@ urlpatterns = [
         AddBlockOfTypeView.as_view(),
         name='add_block_of_type',
     ),
+    path('edit-block/<int:pk>/', EditBlockView.as_view(), name='edit_block'),
     path(
         'delete-block/<int:pk>/',
         DeleteBlockView.as_view(),
