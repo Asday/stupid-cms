@@ -1,4 +1,5 @@
 - 12factor.
 - Permissions, but proper.
+- Check landing on a UUID page with an anchor in the URL correctly overwrites.
 
 - Everything else.
