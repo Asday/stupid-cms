@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from polymorphic.admin import PolymorphicParentModelAdmin
 
-from .models import Block, Page, TextBlock
+from .models import Block, Page, Reference, TextBlock
 
 
 @admin.register(Block)
@@ -15,3 +15,4 @@ class BlockAdmin(PolymorphicParentModelAdmin):
 
 admin.site.register(TextBlock)
 admin.site.register(Page)
+admin.site.register(Reference)

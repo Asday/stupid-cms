@@ -4,6 +4,7 @@ from uuid import uuid4
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.shortcuts import reverse
+from django.utils.functional import cached_property
 from django.utils.text import mark_safe, slugify
 
 from polymorphic.models import PolymorphicManager, PolymorphicModel
@@ -360,8 +361,12 @@ class TextBlock(Block):
     content = models.TextField()
 
     def render(self):
+        content = self.content
+        for reference in self.references.all():
+            content = reference.update_references(content)
+
         return mark_safe(
-            self._meta.app_config.markdown_parser.convert(self.content)
+            self._meta.app_config.markdown_parser.convert(content)
         )
 
 
@@ -388,11 +393,30 @@ class Reference(models.Model):
         blank=True,
     )
 
-    def save(self, *args, **kwargs):
-        if self.referenced_block is None and self.referenced_page is None:
+    def _validate(self):
+        if (self.referenced_block, self.referenced_page).count(None) != 1:
             raise ValidationError(
                 '`Reference`s must refer to either a `Page` or a'
                 ' `Block`.'
             )
+
+    @property
+    def reference(self):
+        self._validate()
+
+        return self.referenced_block or self.referenced_page
+
+    @cached_property
+    def href(self):
+        return self.reference.get_absolute_url()
+
+    def update_references(self, content):
+        return content \
+            .replace('\\!ref', '\0') \
+            .replace(f'!ref({self.id})', self.href) \
+            .replace('\0', '\\!ref')
+
+    def save(self, *args, **kwargs):
+        self._validate()
 
         return super().save(*args, **kwargs)
