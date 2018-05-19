@@ -58,7 +58,7 @@
         </section>
 
         {% if request.user.is_staff %}
-          <a href="{% url 'cms:add_block' %}?page={{ page.uuid }}&after={{ block.id }}">
+          <a href="{% url 'cms:add_block' %}?page={{ page.uuid }}&after={{ cms_block.id }}">
             Add block here
           </a>
         {% endif %}
