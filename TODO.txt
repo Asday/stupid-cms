@@ -1,5 +1,6 @@
 - 12factor.
 - Permissions, but proper.
 - Check landing on a UUID page with an anchor in the URL correctly overwrites.
+- https://github.com/Wenzil/mdx_bleach/issues/4
 
 - Everything else.
