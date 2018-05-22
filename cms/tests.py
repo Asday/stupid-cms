@@ -25,10 +25,10 @@ class BlockRedistribution(TestCase):
 
     @tag('functional')
     def test_redistribute_positions_creates_space_between_blocks(self):
-        blocks = self.page.blocks.redistribute_positions()
+        blocks = self.page.blocks.redistribute_positions().order_by('position')
 
-        self.assertGreater(blocks[1].position - blocks[0].position, 100)
-        self.assertGreater(blocks[2].position - blocks[1].position, 100)
+        self.assertGreater(blocks[1].position - blocks[0].position, 1)
+        self.assertGreater(blocks[2].position - blocks[1].position, 1)
 
     @tag('functional')
     def test_redistribute_positions_errors_if_used_on_blocks_from_more_than_one_page(self):  # noqa
