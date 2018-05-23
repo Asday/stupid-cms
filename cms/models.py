@@ -1,4 +1,5 @@
 from functools import reduce
+import re
 from uuid import uuid4
 
 from django.conf import settings
@@ -293,6 +294,15 @@ class Page(models.Model):
 
         return (after.position + before.position) // 2
 
+    def delete(self, *args, **kwargs):
+        for reference in self.referees.from_unpublished():
+            reference.delete()
+
+        for reference in self.blocks.referees().from_unpublished():
+            reference.delete()
+
+        return super().delete(*args, **kwargs)
+
     def save(self, *args, redenormalise_path=False, **kwargs):
         if not self.slug:
             self.slug = slugify(self.title, allow_unicode=True)
@@ -339,6 +349,12 @@ class BlockQuerySet(PolymorphicQuerySet):
 
         return self
 
+    def published(self):
+        return self.filter(published=True)
+
+    def referees(self):
+        return Reference.objects.filter(referenced_block__in=self.values('pk'))
+
 
 class Block(PolymorphicModel):
     parent_page = models.ForeignKey(
@@ -347,11 +363,37 @@ class Block(PolymorphicModel):
         on_delete=models.CASCADE,
     )
     position = models.PositiveSmallIntegerField(editable=False)
+    published = models.BooleanField(default=False)
 
     objects = PolymorphicManager.from_queryset(BlockQuerySet)()
 
     class Meta:
         unique_together = ('parent_page', 'position')
+
+    def render(self):
+        raise NotImplementedError()
+
+    def get_content(self):
+        raise NotImplementedError()
+
+    def validate_references(self):
+        reference_ids = Reference.find_references(self.get_content())
+        references = Reference.objects.filter(id__in=reference_ids)
+
+        if references.count() != len(reference_ids):
+            ids = references.values_list('id', flat=True)
+            missing_ids = reference_ids.difference(ids)
+
+            raise ValidationError(
+                f'Reference(s) {missing_ids} do not exist, please'
+                ' recreate them.'
+            )
+
+    def publish(self):
+        self.validate_references()
+
+        self.published = True
+        self.save()
 
     def get_absolute_url(self):
         return f'{self.parent_page.get_absolute_url()}#{self.id}'
@@ -362,8 +404,11 @@ class TextBlock(Block):
 
     content = models.TextField()
 
+    def get_content(self):
+        return self.content
+
     def render(self):
-        content = self.content
+        content = self.get_content()
         for reference in self.references.all():
             content = reference.update_references(content)
 
@@ -372,7 +417,16 @@ class TextBlock(Block):
         )
 
 
+class ReferenceQuerySet(models.QuerySet):
+
+    def from_unpublished(self):
+        return self.filter(containing_block__published=False)
+
+
 class Reference(models.Model):
+    hook = '!ref'
+    generic_hook_re = re.compile(f'(?<!\\\\){hook}\\((?P<ref>\\d+)\)')
+
     containing_block = models.ForeignKey(
         'cms.Block',
         related_name='references',
@@ -395,6 +449,13 @@ class Reference(models.Model):
         blank=True,
     )
 
+    objects = models.Manager.from_queryset(ReferenceQuerySet)()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.hook_re = re.compile(f'(?<!\\\\){self.hook}\\({self.id}\)')
+
     def _validate(self):
         if (self.referenced_block, self.referenced_page).count(None) != 1:
             raise ValidationError(
@@ -413,10 +474,11 @@ class Reference(models.Model):
         return self.reference.get_absolute_url()
 
     def update_references(self, content):
-        return content \
-            .replace('\\!ref', '\0') \
-            .replace(f'!ref({self.id})', self.href) \
-            .replace('\0', '\\!ref')
+        return self.hook_re.sub(self.href, content)
+
+    @classmethod
+    def find_references(cls, content):
+        return set(cls.generic_hook_re.findall(content))
 
     def save(self, *args, **kwargs):
         self._validate()

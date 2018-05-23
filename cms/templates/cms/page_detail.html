@@ -45,7 +45,7 @@
 
     <article class='content'>
       <aside class='table-of-contents'>
-        {% include 'cms/partials/table_of_contents.html' with blocks=page.blocks.all %}
+        {% include 'cms/partials/table_of_contents.html' with blocks=page.blocks.published %}
       </aside>
 
       {% if request.user.is_staff %}
@@ -54,7 +54,7 @@
         </a>
       {% endif %}
 
-      {% for cms_block in page.blocks.all %}
+      {% for cms_block in page.blocks.published %}
         <section>
           {% if request.user.is_staff %}
             <a href="{% url 'cms:edit_block' pk=cms_block.pk %}">Edit block</a>

@@ -1,7 +1,53 @@
 from django.core.exceptions import ValidationError
 from django.test import TestCase, tag
 
-from .models import Block, Page
+from .models import Block, Page, Reference, TextBlock
+
+
+class ReferenceCreation(TestCase):
+
+    def setUp(self):
+        self.a = Page.objects.create(title='A')
+        self.b = Page.objects.create(title='B')
+
+        self.b_block = Block.objects.create(parent_page=self.b, position=0)
+
+    @tag('story')
+    def test_referenced_page_being_deleted_prevents_publishing_of_block_with_references_to_it_and_its_blocks(self):  # noqa
+        # Barret creates a block.
+        block = TextBlock.objects.create(parent_page=self.a, position=9)
+
+        # Barret references page B within his block.
+        page_reference = Reference.objects.create(
+            containing_block=block,
+            referenced_page=self.b,
+        )
+        page_reference_id = page_reference.id
+        block.content += f'{Reference.hook}({page_reference_id})\n\n'
+
+        # Barret also references a block on page B within his block.
+        block_reference = Reference.objects.create(
+            containing_block=block,
+            referenced_block=self.b_block,
+        )
+        block_reference_id = block_reference.id
+        block.content += f'{Reference.hook}({block_reference_id})\n\n'
+
+        # Aeris deletes page B without issue.
+        self.b.delete()  # Should not raise.
+
+        # In doing so, Aeris has also deleted the reference Barret just
+        # created.
+        references = (page_reference_id, block_reference_id)
+        self.assertEqual(
+            Reference.objects.filter(id__in=references).exists(),
+            False,
+        )
+
+        # Barret attempts to save his block and receives a
+        # `ValidationError`.
+        with self.assertRaises(ValidationError):
+            block.publish()
 
 
 class BlockRedistribution(TestCase):
