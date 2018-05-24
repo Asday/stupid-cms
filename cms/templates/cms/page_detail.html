@@ -54,7 +54,7 @@
         </a>
       {% endif %}
 
-      {% for cms_block in page.blocks.published %}
+      {% for cms_block in page.blocks.published|dictsort:'position' %}
         <section>
           {% if request.user.is_staff %}
             <a href="{% url 'cms:edit_block' pk=cms_block.pk %}">Edit block</a>
