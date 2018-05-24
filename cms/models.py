@@ -481,7 +481,7 @@ class Block(CastablePolymorphicModelMixin, PolymorphicModel):
 class TextBlock(Block):
     template_name = 'cms/blocks/textblock.html'
 
-    content = models.TextField()
+    content = models.TextField(blank=True)
 
     def __str__(self):
         # If the first line is a heading, return that.
