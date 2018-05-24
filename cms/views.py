@@ -14,12 +14,7 @@ from django.views.generic import (
     View,
 )
 
-from .forms import (
-    BlockTypeChoiceForm,
-    EditTextBlockForm,
-    PageForm,
-    TextBlockForm,
-)
+from .forms import BlockTypeChoiceForm, PageForm, TextBlockForm
 from .models import Block, Page, TextBlock, UnsavedWork
 
 
@@ -72,6 +67,21 @@ class AddBlockView(StaffOnlyMixin, FormView):
     def form_valid(self, form):
         parameters = self.request.GET.copy()
         parameters['blocktype'] = form.cleaned_data['blocktype']
+
+        page_uuid = parameters.get('page', '')
+        after = parameters.get('after', None)
+        parent_page = get_object_or_404(Page.objects.all(), uuid=page_uuid)
+        position = parent_page.get_position_after(after)
+
+        parameters.pop('page', None)
+        parameters.pop('after', None)
+
+        block = Block.objects.create(
+            parent_page=parent_page,
+            position=position,
+        )
+
+        parameters['block_id'] = block.id
 
         return HttpResponseRedirect(
             f'{self.get_success_url()}?{parameters.urlencode()}'
@@ -159,24 +169,38 @@ class AddReferenceMixin(UnsavedWorkMixin):
 
 class AddGenericBlockOfTypeBaseView(AddReferenceMixin, CreateView):
 
+    def get_block_extra_attrs(self):
+        return {}
+
+    def get_block_extra_kwargs(self):
+        return {}
+
+    def get_object(self):
+        block = get_object_or_404(
+            Block.objects.all(),
+            id=self.request.GET.get('block_id', ''),
+        )
+
+        if type(block) != self.model:
+            block = block.cast_to(
+                self.model,
+                extra_attrs=self.get_block_extra_attrs(),
+                extra_kwargs=self.get_block_extra_kwargs(),
+            )
+
+        return block
+
     def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
+        self.object = self.get_object()
 
-        parent_page = get_object_or_404(
-            Page.objects.all(),
-            uuid=self.request.GET.get('page', '')
-        )
+        return super().get_form_kwargs()
 
-        position = parent_page.get_position_after(
-            self.request.GET.get('after')
-        )
+    def form_valid(self, form):
+        form.instance.publish()
 
-        kwargs.update({
-            'parent_page': parent_page,
-            'position': position,
-        })
+        self.model.objects.delete_old_unpublished()
 
-        return kwargs
+        return super().form_valid(form)
 
 
 class AddTextBlockView(StaffOnlyMixin, AddGenericBlockOfTypeBaseView):
@@ -233,12 +257,12 @@ class DeleteBlockView(StaffOnlyMixin, DeleteView):
 class EditBlockView(AddReferenceMixin, StaffOnlyMixin, UpdateView):
     model = Block
     form_classes = {
-        TextBlock: EditTextBlockForm,
+        TextBlock: TextBlockForm,
     }
     template_name_suffix = '_edit_form'
 
     def get_form_class(self):
-        return self.form_classes[self.object.__class__]
+        return self.form_classes[type(self.object)]
 
 
 class AddPageView(StaffOnlyMixin, CreateView):

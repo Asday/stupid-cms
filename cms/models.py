@@ -353,6 +353,18 @@ class BlockQuerySet(PolymorphicQuerySet):
     def published(self):
         return self.filter(published=True)
 
+    def unpublished(self):
+        return self.filter(published=False)
+
+    def old_unpublished(self):
+        ttl = self.model._meta.app_config.delete_unpublished_blocks_after
+        best_before = timezone.now() - ttl
+
+        return self.unpublished().filter(created__lte=best_before)
+
+    def delete_old_unpublished(self):
+        self.old_unpublished().delete()
+
     def referees(self):
         return Reference.objects.filter(referenced_block__in=self.values('pk'))
 
@@ -363,10 +375,10 @@ class CastablePolymorphicModelMixin(object):
         extra_attrs = extra_attrs or {}
         extra_kwargs = extra_kwargs or {}
 
-        if not issubclass(child_type, self.__class__):
+        if not issubclass(child_type, type(self)):
             raise ValidationError(
-                f'{child_type.__class__.__name__} is not a subclass of'
-                f'{self.__class__.__name__}'
+                f'{child_type.__name__} is not a subclass of'
+                f'{type(self).__name__}'
             )
 
         field_names = (
@@ -383,7 +395,7 @@ class CastablePolymorphicModelMixin(object):
 
         setattr(
             child_instance,
-            f'{self.__class__.__name__.lower()}_ptr_id',
+            f'{type(self).__name__.lower()}_ptr_id',
             self.pk,
         )
         self.polymorphic_ctype = ContentType.objects.get(
@@ -405,6 +417,7 @@ class Block(CastablePolymorphicModelMixin, PolymorphicModel):
     )
     position = models.PositiveSmallIntegerField(editable=False)
     published = models.BooleanField(default=False)
+    created = models.DateTimeField(auto_now_add=True)
 
     objects = PolymorphicManager.from_queryset(BlockQuerySet)()
 
@@ -417,24 +430,45 @@ class Block(CastablePolymorphicModelMixin, PolymorphicModel):
     def get_content(self):
         raise NotImplementedError()
 
-    def validate_references(self):
-        reference_ids = Reference.find_references(self.get_content())
-        references = Reference.objects.filter(id__in=reference_ids)
+    def validate_references(self, content=None):
+        reference_ids = Reference.find_references(
+            content or self.get_content(),
+        )
+        references = Reference.objects.filter(
+            id__in=reference_ids,
+            containing_block=self,
+        )
 
         if references.count() != len(reference_ids):
             ids = references.values_list('id', flat=True)
             missing_ids = reference_ids.difference(ids)
 
-            raise ValidationError(
-                f'Reference(s) {missing_ids} do not exist, please'
-                ' recreate them.'
+            if not missing_ids:
+                return
+
+            error_message = (
+                f'Reference {missing_ids} does not exist, or belong to'
+                ' this block.  Please recreate it.'
+            )
+            error_message_plural = (
+                f'References {missing_ids} do not exist, or belong to'
+                ' this block.  Please recreate them.'
             )
 
-    def publish(self):
+            if len(missing_ids) == 1:
+                error_message = error_message
+            else:
+                error_message = error_message_plural
+
+            raise ValidationError(error_message)
+
+    def publish(self, commit=True):
         self.validate_references()
 
         self.published = True
-        self.save()
+
+        if commit:
+            self.save()
 
     def get_absolute_url(self):
         return f'{self.parent_page.get_absolute_url()}#{self.id}'

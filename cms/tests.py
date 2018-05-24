@@ -61,7 +61,7 @@ class ReferenceCreation(TestCase):
         # Barret attempts to save his block and receives a
         # `ValidationError`.
         with self.assertRaises(ValidationError):
-            block.publish()
+            block.validate_references()
 
 
 class BlockRedistribution(TestCase):

@@ -16,6 +16,7 @@ class CmsConfig(AppConfig):
     name = 'cms'
     markdown_parser = None
     delete_unsaved_work_after = timedelta(days=4)
+    delete_unpublished_blocks_after = timedelta(days=1)
 
     def ready(self):
         self.markdown_parser = self._create_markdown_parser()
