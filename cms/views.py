@@ -1,6 +1,7 @@
 import json
+from urllib.parse import unquote, urlencode
 
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpResponseBadRequest, HttpResponseRedirect
@@ -14,8 +15,8 @@ from django.views.generic import (
     View,
 )
 
-from .forms import BlockTypeChoiceForm, PageForm, TextBlockForm
-from .models import Block, Page, TextBlock, UnsavedWork
+from .forms import BlockTypeChoiceForm, PageForm, ReferenceForm, TextBlockForm
+from .models import Block, Page, Reference, TextBlock, UnsavedWork
 
 
 class StaffOnlyMixin(UserPassesTestMixin):
@@ -164,7 +165,35 @@ class AddReferenceMixin(UnsavedWorkMixin):
     alternate_submit_button_name = 'addReference'
 
     def get_alternate_success_url(self):
-        return 'todo'
+        raw_uri = self.request.get_raw_uri()
+        current_url = raw_uri[raw_uri.index(self.request.path):]
+
+        parameters = {
+            'block_id': self.get_object().id,
+            'next': current_url,
+        }
+
+        url = reverse('cms:add_reference')
+
+        return f'{url}?{urlencode(parameters)}'
+
+
+class AddReferenceView(CreateView):
+    model = Reference
+    form_class = ReferenceForm
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+
+        kwargs['containing_block'] = get_object_or_404(
+            Block.objects.all(),
+            id=self.request.GET.get('block_id', None),
+        )
+
+        return kwargs
+
+    def get_success_url(self):
+        return unquote(self.request.GET.get('next', ''))
 
 
 class AddGenericBlockOfTypeBaseView(AddReferenceMixin, CreateView):

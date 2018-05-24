@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Page, TextBlock
+from .models import Page, Reference, TextBlock
 
 
 class PageForm(forms.ModelForm):
@@ -32,3 +32,20 @@ class TextBlockForm(GenericBlockForm):
     class Meta:
         fields = ('content', )
         model = TextBlock
+
+
+class ReferenceForm(forms.ModelForm):
+
+    class Meta:
+        fields = ('referenced_page', 'referenced_block')
+        model = Reference
+
+    def __init__(self, containing_block, **kwargs):
+        super().__init__(**kwargs)
+
+        self._containing_block = containing_block
+
+    def save(self, *args, **kwargs):
+        self.instance.containing_block = self._containing_block
+
+        return super().save(*args, **kwargs)

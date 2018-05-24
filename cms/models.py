@@ -581,6 +581,9 @@ class Reference(models.Model):
     def find_references(cls, content):
         return set(cls.generic_hook_re.findall(content))
 
+    def clean(self):
+        self._validate()
+
     def save(self, *args, **kwargs):
         self._validate()
 
