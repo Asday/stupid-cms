@@ -15,6 +15,16 @@
           Add Reference
         </button>
       </form>
+
+      <aside>
+        {% for reference in cms_block.references.all %}
+          <ul>
+            {% include 'cms/partials/reference_preview.html' with reference=reference %}
+          </ul>
+        {% empty %}
+          No references have been created yet.
+        {% endfor %}
+      </aside>
     </article>
   </main>
 {% endblock %}

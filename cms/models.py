@@ -9,7 +9,7 @@ from django.db import models, transaction
 from django.shortcuts import reverse
 from django.utils import timezone
 from django.utils.functional import cached_property
-from django.utils.text import mark_safe, slugify
+from django.utils.text import Truncator, mark_safe, slugify
 
 from polymorphic.models import PolymorphicManager, PolymorphicModel
 from polymorphic.query import PolymorphicQuerySet
@@ -60,7 +60,11 @@ class Page(models.Model):
         unique_together = ('denormalised_path', 'slug')
 
     def __str__(self):
-        return f'Page "{self.title}"'
+        titles = [
+            title for title in self.denormalised_titles.split('\n') if title
+        ]
+
+        return ' / '.join(titles + [self.title])
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -479,6 +483,15 @@ class TextBlock(Block):
 
     content = models.TextField()
 
+    def __str__(self):
+        # If the first line is a heading, return that.
+        lines = self.content.strip().split('\n')
+        if lines[0].strip().startswith('#'):
+            return lines[0].strip()[1:].strip()
+
+        # Otherwise return a truncation of the block.
+        return Truncator(self.content).chars(25)
+
     def get_content(self):
         return self.content
 
@@ -539,10 +552,23 @@ class Reference(models.Model):
             )
 
     @property
+    def hook_text(self):
+        return f'{self.hook}({self.id})'
+
+    @property
     def reference(self):
         self._validate()
 
         return self.referenced_block or self.referenced_page
+
+    @property
+    def referenced_title(self):
+        self._validate()
+
+        if self.referenced_block:
+            return f'{self.reference.parent_page}, {self.reference}'
+
+        return self.reference
 
     @cached_property
     def href(self):

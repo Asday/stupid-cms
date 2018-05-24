@@ -206,6 +206,7 @@ class AddGenericBlockOfTypeBaseView(AddReferenceMixin, CreateView):
 class AddTextBlockView(StaffOnlyMixin, AddGenericBlockOfTypeBaseView):
     model = TextBlock
     form_class = TextBlockForm
+    context_object_name = 'cms_block'
 
 
 class AddBlockOfTypeView(StaffOnlyMixin, View):
@@ -260,6 +261,7 @@ class EditBlockView(AddReferenceMixin, StaffOnlyMixin, UpdateView):
         TextBlock: TextBlockForm,
     }
     template_name_suffix = '_edit_form'
+    context_object_name = 'cms_block'
 
     def get_form_class(self):
         return self.form_classes[type(self.object)]
