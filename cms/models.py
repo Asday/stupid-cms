@@ -3,6 +3,7 @@ import re
 from uuid import uuid4
 
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.shortcuts import reverse
@@ -356,7 +357,47 @@ class BlockQuerySet(PolymorphicQuerySet):
         return Reference.objects.filter(referenced_block__in=self.values('pk'))
 
 
-class Block(PolymorphicModel):
+class CastablePolymorphicModelMixin(object):
+
+    def cast_to(self, child_type, extra_attrs=None, extra_kwargs=None):
+        extra_attrs = extra_attrs or {}
+        extra_kwargs = extra_kwargs or {}
+
+        if not issubclass(child_type, self.__class__):
+            raise ValidationError(
+                f'{child_type.__class__.__name__} is not a subclass of'
+                f'{self.__class__.__name__}'
+            )
+
+        field_names = (
+            field.name for field in self._meta.fields
+            if field.name not in ('id', 'polymorphic_ctype')
+        )
+
+        child_instance = child_type(**extra_kwargs)
+        for field_name in field_names:
+            setattr(child_instance, field_name, getattr(self, field_name))
+
+        for attr_name, attr_value in extra_attrs.items():
+            setattr(child_instance, attr_name, attr_value)
+
+        setattr(
+            child_instance,
+            f'{self.__class__.__name__.lower()}_ptr_id',
+            self.pk,
+        )
+        self.polymorphic_ctype = ContentType.objects.get(
+            app_label=self._meta.app_label,
+            model=self._meta.model_name,
+        )
+
+        self.save()
+        child_instance.save()
+
+        return child_instance
+
+
+class Block(CastablePolymorphicModelMixin, PolymorphicModel):
     parent_page = models.ForeignKey(
         'cms.Page',
         related_name='blocks',

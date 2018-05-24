@@ -4,6 +4,20 @@ from django.test import TestCase, tag
 from .models import Block, Page, Reference, TextBlock
 
 
+class PolymorphicCasting(TestCase):
+
+    def test_casting_to_child_type(self):
+        page = Page.objects.create(title='A')
+        block = Block.objects.create(parent_page=page, position=0)
+
+        text_block = block.cast_to(TextBlock)  # noqa
+
+        cast_block = Block.objects.get(id=text_block.id)
+        self.assertEqual(type(cast_block), TextBlock)
+
+        self.assertEqual(TextBlock.objects.get(id=block.id), text_block)
+
+
 class ReferenceCreation(TestCase):
 
     def setUp(self):
