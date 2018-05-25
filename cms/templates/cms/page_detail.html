@@ -37,7 +37,12 @@
       {% endif %}
     </nav>
 
-    <h1>{{ page.title }}</h1>
+    <span>
+      <h1>{{ page.title }}</h1>
+      {% if request.user.is_staff %}
+        <a href="{% url 'cms:move_page' pk=page.pk %}">Move page</a>
+      {% endif %}
+    </span>
   </header>
 
   <main>

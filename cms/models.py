@@ -161,6 +161,11 @@ class Page(models.Model):
 
             parent = parent.parent
 
+    def clean(self):
+        super().clean()
+
+        self._validate_noncyclic_hierarchy()
+
     def get_absolute_url(self):
         url = 'path_page'
         kwargs = {'slug': self.slug, 'path': self.denormalised_path}

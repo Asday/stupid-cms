@@ -10,6 +10,13 @@ class PageForm(forms.ModelForm):
         model = Page
 
 
+class MovePageForm(forms.ModelForm):
+
+    class Meta:
+        fields = ('parent', )
+        model = Page
+
+
 class BlockTypeChoiceForm(forms.Form):
     blocktype = forms.ChoiceField(
         label='Choose the type of content you\'re creating:',

@@ -15,7 +15,13 @@ from django.views.generic import (
     View,
 )
 
-from .forms import BlockTypeChoiceForm, PageForm, ReferenceForm, TextBlockForm
+from .forms import (
+    BlockTypeChoiceForm,
+    MovePageForm,
+    PageForm,
+    ReferenceForm,
+    TextBlockForm,
+)
 from .models import Block, Page, Reference, TextBlock, UnsavedWork
 
 
@@ -320,3 +326,8 @@ class AddPageView(StaffOnlyMixin, CreateView):
         initial['parent'] = self.request.GET.get('from', None)
 
         return initial
+
+
+class MovePageView(StaffOnlyMixin, UpdateView):
+    model = Page
+    form_class = MovePageForm
