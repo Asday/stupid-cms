@@ -1,6 +1,7 @@
 import json
 from urllib.parse import unquote, urlencode
 
+from django.contrib.admin.utils import NestedObjects
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import ProtectedError
@@ -351,6 +352,31 @@ class DeletePageView(StaffOnlyMixin, DeleteView):
         context = super().get_context_data(**kwargs)
 
         context['protected_objects'] = self.protected_objects
+
+        collector = NestedObjects(using='default')
+        collector.collect([self.object])
+        to_be_deleted = collector.nested()
+
+        def remove_unpublished(tree):
+            filtered_tree = []
+            for item in tree:
+                if type(item) == list:
+                    filtered_tree.append(remove_unpublished(item))
+
+                elif type(item) == Page:
+                    filtered_tree.append(item)
+
+                elif issubclass(type(item), Block) and type(item) != Block:
+                    if item.published:
+                        filtered_tree.append(item)
+
+                elif type(item) == Reference:
+                    if item.containing_block.published:
+                        filtered_tree.append(item)
+
+            return filtered_tree
+
+        context['to_be_deleted'] = remove_unpublished(to_be_deleted)
 
         return context
 

@@ -1,0 +1,9 @@
+{% load get_type %}
+
+{% for item in to_be_deleted %}
+    {% if item|get_type == 'list' %}
+      {% include 'cms/partials/to_be_deleted.html' with to_be_deleted=item depth=depth|add:1 %}
+    {% else %}
+      <span style="padding-left: {{ depth }}em;">{{ item }}</span><br />
+    {% endif %}
+{% endfor %}
