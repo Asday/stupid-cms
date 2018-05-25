@@ -161,16 +161,22 @@ class UnsavedWorkMixin(object):
         return super().form_valid(form)
 
 
-class AddReferenceMixin(UnsavedWorkMixin):
-    alternate_submit_button_name = 'addReference'
+class GetCurrentURLMixin(object):
 
-    def get_alternate_success_url(self):
+    def get_current_url(self):
         raw_uri = self.request.get_raw_uri()
         current_url = raw_uri[raw_uri.index(self.request.path):]
 
+        return current_url
+
+
+class AddReferenceMixin(GetCurrentURLMixin, UnsavedWorkMixin):
+    alternate_submit_button_name = 'addReference'
+
+    def get_alternate_success_url(self):
         parameters = {
             'block_id': self.get_object().id,
-            'next': current_url,
+            'next': self.get_current_url(),
         }
 
         url = reverse('cms:add_reference')
@@ -191,6 +197,14 @@ class AddReferenceView(CreateView):
         )
 
         return kwargs
+
+    def get_success_url(self):
+        return unquote(self.request.GET.get('next', ''))
+
+
+class DeleteReferenceView(GetCurrentURLMixin, DeleteView):
+    model = Reference
+    context_object_name = 'reference'
 
     def get_success_url(self):
         return unquote(self.request.GET.get('next', ''))

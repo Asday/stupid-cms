@@ -3,4 +3,11 @@
   &mdash;
   {{ reference.referenced_title }}
   <small>(<a href="{{ reference.href }}">{{ reference.href }}</a>)</small>
+  {% if not hide_delete %}
+    <small>
+      <a href="{% url 'cms:delete_reference' pk=reference.pk %}?next={{ view.get_current_url|urlencode:"" }}">
+        delet this
+      </a>
+    </small>
+  {% endif %}
 </li>

@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block title %}
+  Delete Reference
+{% endblock %}
+
+{% block content %}
+  <main>
+    <article>
+      <h1>
+        Are you sure you want to delete the following reference?
+      </h1>
+
+      <section>
+        {% include 'cms/partials/reference_preview.html' with reference=reference hide_delete=True %}
+      </section>
+
+      <section>
+        <form method="POST">
+          {% csrf_token %}
+          {{ form.as_p }}
+
+          <button type="submit">Delete</button>
+        </form>
+      </section>
+    </article>
+  </main>
+{% endblock %}
