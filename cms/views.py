@@ -1,11 +1,11 @@
 import json
 from urllib.parse import unquote, urlencode
 
-from django.urls import reverse, reverse_lazy
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpResponseBadRequest, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
+from django.urls import reverse, reverse_lazy
 from django.views.generic import (
     CreateView,
     DeleteView,
