@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}
+  Delete Page
+{% endblock %}
+
+{% block content %}
+  <main>
+    <article>
+      <h1>
+        Are you sure you want to delete the following page?
+      </h1>
+
+      {% if protected_objects %}
+        <section>
+          <span>
+            Deletion failed due to the following references to what
+            you're trying to delete.
+          </span>
+
+          <ul>
+            {% for reference in protected_objects %}
+              <li>
+                <a href="{% url 'cms:edit_block' pk=reference.containing_block.pk %}">
+                  {{ reference.containing_block }}
+                </a>
+              </li>
+            {% endfor %}
+          </ul>
+        </section>
+      {% endif %}
+
+      <section>
+        {{ page }}
+      </section>
+
+      <section>
+        <form method="POST">
+          {% csrf_token %}
+
+          <button type="submit">Delete</button>
+        </form>
+      </section>
+    </article>
+  </main>
+{% endblock %}

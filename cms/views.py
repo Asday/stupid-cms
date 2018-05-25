@@ -3,6 +3,7 @@ from urllib.parse import unquote, urlencode
 
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.core.exceptions import ImproperlyConfigured
+from django.db.models import ProtectedError
 from django.http import HttpResponseBadRequest, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse, reverse_lazy
@@ -331,3 +332,31 @@ class AddPageView(StaffOnlyMixin, CreateView):
 class MovePageView(StaffOnlyMixin, UpdateView):
     model = Page
     form_class = MovePageForm
+
+
+class DeletePageView(StaffOnlyMixin, DeleteView):
+    model = Page
+    context_object_name = 'page'
+    protected_objects = None
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            return super().delete(request, *args, **kwargs)
+        except ProtectedError as e:
+            self.protected_objects = e.protected_objects
+
+            return self.get(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        context['protected_objects'] = self.protected_objects
+
+        return context
+
+    def get_success_url(self):
+        if self.object.parent:
+            return self.object.parent.get_absolute_url()
+
+        else:
+            return '/'

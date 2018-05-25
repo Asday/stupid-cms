@@ -31,7 +31,7 @@ class Page(models.Model):
     parent = models.ForeignKey(
         'self',
         related_name='children',
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         blank=True,
         null=True,
     )
