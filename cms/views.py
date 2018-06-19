@@ -333,6 +333,7 @@ class AddPageView(StaffOnlyMixin, CreateView):
 class MovePageView(StaffOnlyMixin, UpdateView):
     model = Page
     form_class = MovePageForm
+    template_name_suffix = '_move_form'
 
 
 class DeletePageView(StaffOnlyMixin, DeleteView):
