@@ -21,7 +21,11 @@ app_name = 'cms'
 urlpatterns = [
     path('add-page/', AddPageView.as_view(), name='add_page'),
     path('move-page/<int:pk>/', MovePageView.as_view(), name='move_page'),
-    path('delete-page/<int:pk>/', DeletePageView.as_view(), name='delete_page'),
+    path(
+        'delete-page/<int:pk>/',
+        DeletePageView.as_view(),
+        name='delete_page',
+    ),
     path('add-block/', AddBlockView.as_view(), name='add_block'),
     path(
         'add-block-of-type/',
