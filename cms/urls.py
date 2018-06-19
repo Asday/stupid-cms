@@ -9,6 +9,7 @@ from .views import (
     DeletePageView,
     DeleteReferenceView,
     EditBlockView,
+    MoveBlockView,
     MovePageView,
     PathPageView,
     UUIDPageView,
@@ -28,6 +29,7 @@ urlpatterns = [
         name='add_block_of_type',
     ),
     path('edit-block/<int:pk>/', EditBlockView.as_view(), name='edit_block'),
+    path('move-block/<int:pk>/', MoveBlockView.as_view(), name='move_block'),
     path(
         'delete-block/<int:pk>/',
         DeleteBlockView.as_view(),

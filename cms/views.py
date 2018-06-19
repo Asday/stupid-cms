@@ -19,6 +19,7 @@ from django.views.generic import (
 
 from .forms import (
     BlockTypeChoiceForm,
+    MoveBlockForm,
     MovePageForm,
     PageForm,
     ReferenceForm,
@@ -273,9 +274,7 @@ class AddBlockOfTypeView(StaffOnlyMixin, View):
         return self.handlers[blocktype](request, *args, **kwargs)
 
 
-class DeleteBlockView(StaffOnlyMixin, DeleteView):
-    model = Block
-    context_object_name = 'cms_block'
+class PolymorphicTemplateNameOverrideMixin(object):
 
     def get_template_names(self):
         # The default implementation is a little too clever here, as
@@ -301,6 +300,15 @@ class DeleteBlockView(StaffOnlyMixin, DeleteView):
         self.object._meta.model_name = old_model_name
 
         return template_names
+
+
+class DeleteBlockView(
+        StaffOnlyMixin,
+        PolymorphicTemplateNameOverrideMixin,
+        DeleteView,
+        ):
+    model = Block
+    context_object_name = 'cms_block'
 
     def get_success_url(self):
         return self.object.parent_page.get_absolute_url()
@@ -333,6 +341,16 @@ class AddPageView(StaffOnlyMixin, CreateView):
 class MovePageView(StaffOnlyMixin, UpdateView):
     model = Page
     form_class = MovePageForm
+    template_name_suffix = '_move_form'
+
+
+class MoveBlockView(
+        StaffOnlyMixin,
+        PolymorphicTemplateNameOverrideMixin,
+        UpdateView,
+        ):
+    model = Block
+    form_class = MoveBlockForm
     template_name_suffix = '_move_form'
 
 

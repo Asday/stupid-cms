@@ -282,7 +282,9 @@ class Page(models.Model):
         if after is None:
             return self.get_first_position()
 
-        after = self.blocks.get(id=after)
+        if not isinstance(after, models.Model):
+            after = self.blocks.get(id=after)
+
         blocks_after = self.blocks.filter(position__gte=after.position)
 
         if blocks_after.count() == 1:

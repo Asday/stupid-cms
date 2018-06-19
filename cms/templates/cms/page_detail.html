@@ -63,6 +63,7 @@
       {% for cms_block in page.blocks.published|dictsort:'position' %}
         <section>
           {% if request.user.is_staff %}
+            <a href="{% url 'cms:move_block' pk=cms_block.pk %}">Move block</a>
             <a href="{% url 'cms:edit_block' pk=cms_block.pk %}">Edit block</a>
             <a href="{% url 'cms:delete_block' pk=cms_block.pk %}">Delete block</a>
           {% endif %}
