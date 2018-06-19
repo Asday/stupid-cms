@@ -9,6 +9,7 @@ from .views import (
     DeletePageView,
     DeleteReferenceView,
     EditBlockView,
+    HomeView,
     MoveBlockView,
     MovePageView,
     PathPageView,
@@ -19,6 +20,7 @@ from .views import (
 app_name = 'cms'
 
 urlpatterns = [
+    path('', HomeView.as_view(), name='home'),
     path('add-page/', AddPageView.as_view(), name='add_page'),
     path('move-page/<int:pk>/', MovePageView.as_view(), name='move_page'),
     path(

@@ -1,0 +1,11 @@
+<nav class='auth'>
+  {% if request.user.is_staff %}
+      <a href="{% url 'cms:add_page' %}?from={{ page.id }}">Add page</a>
+  {% endif %}
+
+  {% if request.user.is_authenticated %}
+    <a href="{% url 'logout' %}?next={{ page.get_absolute_url }}">Logout</a>
+  {% else %}
+    <a href="{% url 'login' %}?next={{ page.get_absolute_url }}">Login</a>
+  {% endif %}
+</nav>

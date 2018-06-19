@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  {% include 'cms/partials/auth_nav.html' %}
+
+  <ol>
+    {% for page in pages|dictsort:"title" %}
+      <li>{{ page }}</li>
+    {% empty %}
+      <span>No pages yet</span>
+    {% endfor %}
+  </ol>
+{% endblock %}

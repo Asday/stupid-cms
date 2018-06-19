@@ -13,6 +13,7 @@ from django.views.generic import (
     DeleteView,
     DetailView,
     FormView,
+    ListView,
     UpdateView,
     View,
 )
@@ -405,3 +406,8 @@ class DeletePageView(StaffOnlyMixin, DeleteView):
 
         else:
             return '/'
+
+
+class HomeView(ListView):
+    queryset = Page.objects.filter(parent=None)
+    context_object_name = 'pages'
