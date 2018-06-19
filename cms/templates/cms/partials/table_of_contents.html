@@ -1,2 +1,15 @@
 <nav>
+  <h2>Table of Contents</h2>
+  <ol>
+    {% for cms_block in blocks|dictsort:"position" %}
+      <li>
+        <a href="{{ cms_block.get_absolute_url }}">
+          {{ cms_block }}
+        </a>
+      </li>
+
+    {% empty %}
+      <span>No contents yet</span>
+    {% endfor %}
+  </ol>
 </nav>
